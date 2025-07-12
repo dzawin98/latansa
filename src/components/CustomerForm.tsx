@@ -327,32 +327,7 @@ const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onSubmit, onCance
     }
   };
   
-  const createPPPSecret = async (routerId: string, username: string, password: string, profile: string) => {
-    try {
-      const response = await fetch(`http://localhost:3001/api/routers/${routerId}/ppp-secrets`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          username,
-          password,
-          profile
-        })
-      });
-      
-      const result = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(result.message || 'Failed to create PPP secret');
-      }
-      
-      return result;
-    } catch (error: any) {
-      console.error('Error creating PPP secret:', error);
-      throw error;
-    }
-  };
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -362,41 +337,7 @@ const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onSubmit, onCance
       return;
     }
     
-    if (formData.pppSecretType === 'new') {
-      if (!formData.pppSecret || !formData.pppPassword) {
-        alert('Username dan password PPP Secret wajib diisi untuk secret baru');
-        return;
-      }
-      
-      if (!formData.router) {
-        alert('Router harus dipilih untuk membuat PPP Secret baru');
-        return;
-      }
-      
-      if (!formData.package) {
-        alert('Paket harus dipilih untuk menentukan profile PPP Secret');
-        return;
-      }
-    }
-    
     try {
-      if (formData.pppSecretType === 'new' && formData.router && formData.pppSecret && formData.pppPassword && formData.package) {
-        const profile = getProfileFromPackage(formData.package);
-        
-        const selectedRouter = routers.find(r => r.name === formData.router);
-        if (!selectedRouter) {
-          alert('Router tidak ditemukan');
-          return;
-        }
-        
-        try {
-          await createPPPSecret(selectedRouter.id.toString(), formData.pppSecret, formData.pppPassword, profile);
-          alert('PPP Secret berhasil dibuat di MikroTik');
-        } catch (error: any) {
-          alert(`Gagal membuat PPP Secret: ${error.message}`);
-          return;
-        }
-      }
       
       // Convert router name to router ID
       const submitData = { ...formData };
@@ -635,7 +576,6 @@ const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onSubmit, onCance
                 <SelectContent>
                   <SelectItem value="none">Tidak menggunakan PPP Secret</SelectItem>
                   <SelectItem value="existing">Gunakan PPP Secret yang sudah ada</SelectItem>
-                  <SelectItem value="new">Buat PPP Secret baru</SelectItem>
                 </SelectContent>
               </Select>
             </div>

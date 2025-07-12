@@ -266,4 +266,82 @@ router.post('/:id/test-connection', async (req, res) => {
   }
 });
 
+// POST /api/routers/:id/ppp-secrets - Create new PPP secret
+router.post('/:id/ppp-secrets', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { username, password, profile } = req.body;
+
+    // Get router details from database
+    const routerInfo = await Router.findByPk(id);
+    if (!routerInfo) {
+      return res.status(404).json({
+        success: false,
+        message: 'Router not found'
+      });
+    }
+
+    // Validate input
+    if (!username || !password || !profile) {
+      return res.status(400).json({
+        success: false,
+        message: 'Username, password and profile are required'
+      });
+    }
+
+    // Connect to router
+    const conn = new RouterOSAPI({
+      host: routerInfo.ipAddress,
+      user: routerInfo.username,
+      password: routerInfo.password,
+      port: routerInfo.port || 8728
+    });
+
+    try {
+      await conn.connect();
+      
+      // Check if secret already exists
+      const existingSecrets = await conn.write('/ppp/secret/print', [
+        '=.proplist=name',
+        '?=name=' + username
+      ]);
+
+      if (existingSecrets.length > 0) {
+        await conn.close();
+        return res.status(400).json({
+          success: false,
+          message: 'PPP secret with this username already exists'
+        });
+      }
+
+      // Create new PPP secret
+      await conn.write('/ppp/secret/add', [
+        '=name=' + username,
+        '=password=' + password,
+        '=profile=' + profile,
+        '=service=pppoe'
+      ]);
+
+      await conn.close();
+
+      res.json({
+        success: true,
+        message: 'PPP secret created successfully'
+      });
+    } catch (error) {
+      if (conn) {
+        await conn.close();
+      }
+      throw error;
+    }
+  } catch (error) {
+    console.error('Error creating PPP secret:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create PPP secret',
+      error: error.message
+    });
+  }
+});
+
 module.exports = router;
